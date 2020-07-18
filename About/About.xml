@@ -1,6 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
+  <packageId>zetrith.hotswap</packageId>
   <name>HotSwap</name>
-  <targetVersion>1.0.2096</targetVersion>
+  <supportedVersions>
+    <li>1.1</li>
+  </supportedVersions>
   <author>Zetrith</author>
+  <url>https://github.com/Zetrith/HotSwap</url>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/</downloadUrl>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+    </li>
+  </modDependencies>
 </ModMetaData>

@@ -1,9 +1,12 @@
-﻿using Harmony;
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
+using UnityEngine;
 using Verse;
 
 namespace HotSwap
@@ -32,6 +35,11 @@ namespace HotSwap
     [HarmonyPatch(typeof(DebugWindowsOpener), nameof(DebugWindowsOpener.DrawButtons))]
     static class DebugButtonsPatch
     {
+        public static string Tooltip = "Hot swap.";
+
+        static FieldInfo WidgetRow = AccessTools.Field(typeof(DebugWindowsOpener), nameof(DebugWindowsOpener.widgetRow));
+        static MethodInfo DrawMethod = AccessTools.Method(typeof(DebugButtonsPatch), nameof(Draw));
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> insts)
         {
             var list = new List<CodeInstruction>(insts);
@@ -39,8 +47,9 @@ namespace HotSwap
             var labels = list.Last().labels;
             list.RemoveLast();
 
-            list.Add(new CodeInstruction(OpCodes.Ldloc_0) { labels = labels });
-            list.Add(new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(DebugButtonsPatch), nameof(Draw))));
+            list.Add(new CodeInstruction(OpCodes.Ldarg_0) { labels = labels });
+            list.Add(new CodeInstruction(OpCodes.Ldfld, WidgetRow));
+            list.Add(new CodeInstruction(OpCodes.Call, DrawMethod));
             list.Add(new CodeInstruction(OpCodes.Ret));
 
             return list;
@@ -48,7 +57,7 @@ namespace HotSwap
 
         static void Draw(WidgetRow row)
         {
-            if (row.ButtonIcon(TexButton.Paste, "Hot swap."))
+            if (row.ButtonIcon(TexButton.Paste, Tooltip))
                 HotSwapMain.DoHotSwap();
         }
     }
