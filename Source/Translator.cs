@@ -92,7 +92,7 @@ namespace HotSwap
                 if (aname.Name == "<<<NULL>>>")
                     return markerAsm;
 
-                return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(asm => asm.FullName == aname.FullName);
+                return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(asm => asm.GetName().Name == aname.Name);
             }
 
             Type TypeResolver(Assembly asm, string s, bool flag)
