@@ -43,7 +43,7 @@ namespace HotSwap
                     if (search != null && !dict.ContainsKey(search))
                     {
                         dict[search] = fileInfo;
-                        Log.Message($"HotSwap mapped {fileInfo} to {search.GetName()}");
+                        Info($"HotSwap mapped {fileInfo} to {search.GetName()}");
                     }
                 }
             }
@@ -60,6 +60,8 @@ namespace HotSwap
 
         public static void DoHotSwap()
         {
+            Info("Hotswapping...");
+
             foreach (var kv in AssemblyFiles)
             {
                 var asm = kv.Key;
@@ -114,13 +116,19 @@ namespace HotSwap
                             }
                             catch (Exception e)
                             {
-                                Log.Error($"Patching {method.FullDescription()} failed with {e}");
+                                Error($"Patching {method.FullDescription()} failed with {e}");
                             }
                         }
                     }
                 }
             }
+
+            Info("Hotswapping done...");
         }
+
+        // Obsolete signatures, used for cross-version compat
+        static void Info(string str) => Log.Message(str, false);
+        static void Error(string str) => Log.Error(str, false);
 
         public static bool IsCompilerGenerated(Type type)
         {
