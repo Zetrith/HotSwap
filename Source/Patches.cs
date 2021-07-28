@@ -55,10 +55,29 @@ namespace HotSwap
             return list;
         }
 
+        static MethodInfo WidgetRowButtonIcon = AccessTools.Method(typeof(WidgetRow), nameof(Draw));
+
         static void Draw(WidgetRow row)
         {
-            if (row.ButtonIcon(TexButton.Paste, Tooltip))
+            if (WidgetRow_ButtonIcon(row, TexButton.Paste, Tooltip))
                 HotSwapMain.DoHotSwap();
+        }
+
+        // WidgetRow.ButtonIcon as a custom method for cross-version compatibility
+        static bool WidgetRow_ButtonIcon(WidgetRow row, Texture2D tex, string tooltip)
+        {
+            const float width = 24f;
+            row.IncrementYIfWillExceedMaxWidth(width);
+
+            var rect = new Rect(row.LeftX(width), row.curY, width, width);
+            var result = Widgets.ButtonImage(rect, tex, Color.white, GenUI.MouseoverColor, true);
+
+            row.IncrementPosition(width);
+
+            if (!tooltip.NullOrEmpty())
+                TooltipHandler.TipRegion(rect, tooltip);
+
+            return result;
         }
     }
 
