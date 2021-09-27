@@ -22,7 +22,7 @@ namespace HotSwap
 
             var parameters = original.GetParameters();
             var result = parameters.Types().ToList();
-            if (original.IsStatic == false)
+            if (AccessTools.IsStatic(original) == false)
                 result.Insert(0, typeof(object));
             var paramTypes = result.ToArray();
             var returnType = AccessTools.GetReturnedType(original);

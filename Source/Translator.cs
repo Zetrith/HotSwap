@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -8,6 +9,7 @@ using Verse;
 
 namespace HotSwap
 {
+    [HotSwappable]
     static class Translator
     {
         static BindingFlags all = BindingFlags.Public
@@ -21,6 +23,25 @@ namespace HotSwap
 
         static Assembly markerAsm;
 
+        private static Dictionary<string, Type> typeCache = new();
+        private static Dictionary<string, Type> typeSigCache = new();
+        private static Dictionary<Type, MemberInfo[]> memberCache = new();
+        private static Dictionary<MethodBase, ParameterInfo[]> paramsCache = new();
+
+        private static MemberInfo[] GetMembers(Type t)
+        {
+            if (!memberCache.TryGetValue(t, out var cached))
+                return memberCache[t] = t.GetMembers(all);
+            return cached;
+        }
+
+        private static ParameterInfo[] GetParams(MethodBase m)
+        {
+            if (!paramsCache.TryGetValue(m, out var cached))
+                return paramsCache[m] = m.GetParameters();
+            return cached;
+        }
+
         public static object TranslateRef(object dnRef)
         {
             if (dnRef is string)
@@ -29,18 +50,20 @@ namespace HotSwap
             if (dnRef is TypeSig sig)
                 return TranslateTypeSig(sig);
 
-            if (!(dnRef is IMemberRef member))
+            if (dnRef is not IMemberRef member)
                 return null;
 
             if (member.IsField)
             {
                 Type declType = (Type)TranslateRef(member.DeclaringType);
-                return declType.GetField(member.Name, all);
+                var field = declType.GetField(member.Name, all);
+                return field;
             }
-            else if (member.IsMethod && member is IMethod method)
+
+            if (member.IsMethod && member is IMethod method)
             {
                 Type declType = (Type)TranslateRef(member.DeclaringType);
-                var origMembers = declType.GetMembers(all);
+                var origMembers = GetMembers(declType);
 
                 Type[] genericArgs = null;
                 if (method.IsMethodSpec && method is MethodSpec spec)
@@ -51,13 +74,39 @@ namespace HotSwap
                 }
 
                 var openType = declType.IsGenericType ? declType.GetGenericTypeDefinition() : declType;
-                var members = openType.GetMembers(all);
+                var members = GetMembers(openType);
+                MemberInfo ret = null;
+
+                if (genericArgs == null)
+                {
+                    // If a method is unambiguous by name, param count and first param type, return it
+                    // This is a very good heuristic
+                    foreach (var m in origMembers.OfType<MethodBase>())
+                    {
+                        if (m.Name != method.Name) continue;
+                        if (GetParams(m).Length != method.GetParamCount()) continue;
+                        if (GetParams(m).Length > 0 &&
+                            GetParams(m)[0].ParameterType != TranslateRef(method.GetParam(0))) continue;
+
+                        if (ret == null)
+                            ret = m;
+                        else
+                        {
+                            ret = null;
+                            break;
+                        }
+                    }
+                }
+
+                if (ret != null)
+                {
+                    return ret;
+                }
 
                 for (int i = 0; i < members.Length; i++)
                 {
                     var typeMember = members[i];
-                    if (!(typeMember is MethodBase m)) continue;
-
+                    if (typeMember is not MethodBase m) continue;
                     if (!MethodSigMatch(m, method)) continue;
 
                     if (genericArgs != null)
@@ -68,12 +117,17 @@ namespace HotSwap
 
                 return null;
             }
-            else if (member.IsType && member is IType type)
+
+            if (member.IsType && member is IType type)
             {
                 if (type is dnlib.DotNet.TypeSpec spec)
                     return TranslateRef(spec.TypeSig);
 
-                return Type.GetType(type.AssemblyQualifiedName);
+                var aqn = type.AssemblyQualifiedName;
+                if (!typeCache.TryGetValue(aqn, out var cached))
+                    return typeCache[aqn] = Type.GetType(aqn);
+
+                return cached;
             }
 
             return null;
@@ -81,6 +135,10 @@ namespace HotSwap
 
         static Type TranslateTypeSig(TypeSig sig)
         {
+            var aqn = sig.AssemblyQualifiedName;
+            if (typeSigCache.TryGetValue(aqn, out var cached))
+                return cached;
+
             if (markerAsm == null)
                 markerAsm = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("hotswapmarkerassembly"), AssemblyBuilderAccess.ReflectionOnly);
 
@@ -117,12 +175,14 @@ namespace HotSwap
                 return null;
             }
 
-            return Type.GetType(sig.AssemblyQualifiedName, AsmResolver, TypeResolver, false);
+            var result = Type.GetType(aqn, AsmResolver, TypeResolver, false);
+            typeSigCache[aqn] = result;
+            return result;
         }
 
         public static bool MethodSigMatch(MethodBase m, IMethod method)
         {
-            return new SigComparer().Equals(method.Module.Import(m), method);
+            return m.Name == method.Name && new SigComparer().Equals(method.Module.Import(m), method);
         }
 
         static void CollectGenerics(TypeSig sig, Queue<TypeSig> flatGenerics)

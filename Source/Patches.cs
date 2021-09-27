@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -14,6 +15,18 @@ namespace HotSwap
     [HarmonyPatch(typeof(DebugWindowsOpener), nameof(DebugWindowsOpener.DevToolStarterOnGUI))]
     static class AddDebugButtonPatch
     {
+        static void Prefix()
+        {
+            if (Event.current.type == EventType.Repaint && --HotSwapMain.runInFrames == 0)
+                HotSwapMain.DoHotSwap();
+
+            if (HotSwapMain.HotSwapKey.KeyDownEvent)
+            {
+                HotSwapMain.ScheduleHotSwap();
+                Event.current.Use();
+            }
+        }
+
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> insts)
         {
             bool found = false;
@@ -55,12 +68,10 @@ namespace HotSwap
             return list;
         }
 
-        static MethodInfo WidgetRowButtonIcon = AccessTools.Method(typeof(WidgetRow), nameof(Draw));
-
         static void Draw(WidgetRow row)
         {
             if (WidgetRow_ButtonIcon(row, TexButton.Paste, Tooltip))
-                HotSwapMain.DoHotSwap();
+                HotSwapMain.ScheduleHotSwap();
         }
 
         // WidgetRow.ButtonIcon as a custom method for cross-version compatibility

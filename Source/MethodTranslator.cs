@@ -1,14 +1,16 @@
 using dnlib.DotNet.Emit;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using dnlib.DotNet;
 
 namespace HotSwap
 {
-    public class MethodTranslator
+    public static class MethodTranslator
     {
         public static void TranslateLocals(CilBody methodBody, ILGenerator ilGen)
         {
@@ -18,7 +20,7 @@ namespace HotSwap
             }
         }
 
-        public static void TranslateRefs(CilBody methodBody, byte[] newCode, DynamicMethod replacement)
+        public static void TranslateRefs(CilBody methodBody, byte[] newCode, DynamicMethod replacement, Stopwatch[] watches)
         {
             int pos = 0;
 
@@ -33,11 +35,22 @@ namespace HotSwap
                     case dnlib.DotNet.Emit.OperandType.InlineSig:
                     case dnlib.DotNet.Emit.OperandType.InlineTok:
                         pos += inst.OpCode.Size;
-                        object refe = Translator.TranslateRef(inst.Operand);
-                        if (refe == null)
+
+                        var watch = inst.Operand switch
+                        {
+                            IType => 6,
+                            IMethod => 7,
+                            _ => 8
+                        };
+
+                        watches[watch].Start();
+                        object @ref = Translator.TranslateRef(inst.Operand);
+                        watches[watch].Stop();
+
+                        if (@ref == null)
                             throw new NullReferenceException($"Null translation {inst.Operand} {inst.Operand.GetType()}");
 
-                        int token = replacement.AddRef(refe);
+                        int token = replacement.AddRef(@ref);
                         newCode[pos++] = (byte)(token & 255);
                         newCode[pos++] = (byte)(token >> 8 & 255);
                         newCode[pos++] = (byte)(token >> 16 & 255);
