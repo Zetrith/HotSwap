@@ -2,7 +2,8 @@
 
 <Defs>
 
-  <KeyBindingDef ParentName="DevelopmentKeyBinding">
+  <KeyBindingDef>
+	<category>Development</category>
     <defName>HotSwapKey</defName>
     <label>do hot swap</label>
     <defaultKeyCodeA>Home</defaultKeyCodeA>

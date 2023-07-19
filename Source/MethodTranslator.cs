@@ -1,11 +1,8 @@
 using dnlib.DotNet.Emit;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 using dnlib.DotNet;
 
 namespace HotSwap
@@ -20,7 +17,7 @@ namespace HotSwap
             }
         }
 
-        public static void TranslateRefs(CilBody methodBody, byte[] newCode, DynamicMethod replacement, Stopwatch[] watches)
+        public static void TranslateRefs(CilBody methodBody, byte[] newCode, DynamicMethod replacement, Func<string, Stopwatch> watches)
         {
             int pos = 0;
 
@@ -38,14 +35,14 @@ namespace HotSwap
 
                         var watch = inst.Operand switch
                         {
-                            IType => 6,
-                            IMethod => 7,
-                            _ => 8
+                            IType => "IType",
+                            IMethod => "IMethod",
+                            _ => "OtherOperand"
                         };
 
-                        watches[watch].Start();
+                        watches(watch).Start();
                         object @ref = Translator.TranslateRef(inst.Operand);
-                        watches[watch].Stop();
+                        watches(watch).Stop();
 
                         if (@ref == null)
                             throw new NullReferenceException($"Null translation {inst.Operand} {inst.Operand.GetType()}");

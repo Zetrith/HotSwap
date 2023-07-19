@@ -1,12 +1,8 @@
 using HarmonyLib;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
-using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -20,7 +16,7 @@ namespace HotSwap
             if (Event.current.type == EventType.Repaint && --HotSwapMain.runInFrames == 0)
                 HotSwapMain.DoHotSwap();
 
-            if (HotSwapMain.HotSwapKey.KeyDownEvent)
+            if (HotSwapKeyDefOf.HotSwapKey?.KeyDownEvent ?? (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Home))
             {
                 HotSwapMain.ScheduleHotSwap();
                 Event.current.Use();
