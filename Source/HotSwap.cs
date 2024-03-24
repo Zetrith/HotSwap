@@ -46,7 +46,7 @@ namespace HotSwap
                     if (search != null && !dict.ContainsKey(search))
                     {
                         dict[search] = fileInfo;
-                        Info($"HotSwap mapped {fileInfo} to {search.GetName()}");
+                        Log.Message($"HotSwap mapped {fileInfo} to {search.GetName()}");
                     }
                 }
             }
@@ -72,7 +72,7 @@ namespace HotSwap
 
         public static void DoHotSwap()
         {
-            Info("Hotswapping...");
+            Log.Message("Hotswapping...");
 
             var watches = new Dictionary<string, Stopwatch>();
 
@@ -158,7 +158,7 @@ namespace HotSwap
                                 Watch("Detour").Start();
                                 MethodTranslator.TranslateExceptions(methodBody, ilGen);
                                 OldHarmony.PrepareDynamicMethod(replacement);
-                                Memory.DetourMethod(method, replacement);
+                                PatchTools.DetourMethod(method, replacement);
                                 Watch("Detour").Stop();
 
                                 dynMethods[method] = replacement;
@@ -166,7 +166,7 @@ namespace HotSwap
                             }
                             catch (Exception e)
                             {
-                                Error($"Patching {method.FullDescription()} failed with {e}");
+                                Log.Error($"Patching {method.FullDescription()} failed with {e}");
                             }
                         }
                     }
@@ -179,7 +179,7 @@ namespace HotSwap
 
             Watch("Top").Stop();
 
-            Info($"Hotswapping done... {watches.Join(kv => $"{kv.Key}:{kv.Value.ElapsedMilliseconds}ms")}");
+            Log.Message($"Hotswapping done... {watches.Join(kv => $"{kv.Key}:{kv.Value.ElapsedMilliseconds}ms")}");
         }
 
         private static void UpdateHarmonyPatches(HashSet<Type> updatedTypes)
@@ -202,10 +202,6 @@ namespace HotSwap
             foreach (var (owner, type) in unpatchedTypes)
                 new Harmony(owner).CreateClassProcessor(type).Patch();
         }
-
-        // Obsolete signatures, used for cross-version compat
-        static void Info(string str) => Log.Message(str, false);
-        static void Error(string str) => Log.Error(str, false);
 
         public static bool IsCompilerGenerated(Type type)
         {
