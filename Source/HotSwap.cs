@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using RimWorld;
 using Verse;
+using UnityEngine;
 
 namespace HotSwap
 {
@@ -18,11 +19,23 @@ namespace HotSwap
         public static Dictionary<Assembly, FileInfo> AssemblyFiles;
         static Harmony harmony = new("HotSwap");
         static DateTime startTime = DateTime.Now;
+        internal static HotSwapSettings settings;
 
         public HotSwapMain(ModContentPack content) : base(content)
         {
             harmony.PatchAll();
             AssemblyFiles = MapModAssemblies();
+            settings = GetSettings<HotSwapSettings>();
+        }
+
+        public override string SettingsCategory()
+        {
+            return Content.Name;
+        }
+
+        public override void DoSettingsWindowContents(Rect inRect)
+        {
+            settings.DoSettingsWindowContents(inRect);
         }
 
         static Dictionary<Assembly, FileInfo> MapModAssemblies()
