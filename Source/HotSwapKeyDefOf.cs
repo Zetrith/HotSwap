@@ -10,7 +10,7 @@ namespace HotSwap
 
         static HotSwapKeyDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(NeedDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(HotSwapKeyDefOf));
         }
     }
 }

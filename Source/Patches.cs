@@ -27,34 +27,37 @@ namespace HotSwap
     [HarmonyPatch(typeof(DebugWindowsOpener), nameof(DebugWindowsOpener.DrawButtons))]
     static class DebugButtonsPatch
     {
-        private const string Tooltip = "Hot swap.";
+        private const string Tooltip = "Hot swap";
 
-        static void Postfix(DebugWindowsOpener __instance)
+        static readonly FieldInfo _fieldDebugWindowsOpenerWidgetRow = AccessTools.Field(typeof(DebugWindowsOpener), "widgetRow");
+        static readonly MethodInfo _methodWidgetRowFinalX_get = AccessTools.PropertyGetter(typeof(WidgetRow), nameof(WidgetRow.FinalX));
+        static readonly MethodInfo _methodDraw = SymbolExtensions.GetMethodInfo(() => Draw(default));
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            Draw(__instance.widgetRow);
+            var codeMatcher = new CodeMatcher(instructions);
+
+            // Locate the call to WidgetRow.FinalX; we want to place our own button right before it.
+            codeMatcher.SearchForward(i => i.opcode == OpCodes.Callvirt && i.operand is MethodInfo m && m == _methodWidgetRowFinalX_get);
+            if (!codeMatcher.IsValid)
+            {
+                Log.Error("Could not patch DebugWindowsOpener.DrawButtons, IL does not match expectations: call to get value of WidgetRow.FinalX was not found.");
+                return codeMatcher.Instructions();
+            }
+            codeMatcher.Insert(new CodeInstruction[]{
+                // call patch method (Draw)
+                new(OpCodes.Call, _methodDraw),
+                // put WidgetRow field back on stack (we "stole" it from the original call to FinalX)
+                new(OpCodes.Ldarg_0),
+                new(OpCodes.Ldfld, _fieldDebugWindowsOpenerWidgetRow)
+            });
+
+            return codeMatcher.Instructions();
         }
 
         static void Draw(WidgetRow row)
         {
-            if (WidgetRow_ButtonIcon(row, TexButton.Paste, Tooltip))
+            if (row.ButtonIcon(Resources.HotSwapButtonIcon, Tooltip))
                 HotSwapMain.ScheduleHotSwap();
-        }
-
-        // WidgetRow.ButtonIcon as a custom method for cross-version compatibility
-        static bool WidgetRow_ButtonIcon(WidgetRow row, Texture2D tex, string tooltip)
-        {
-            const float width = 24f;
-            row.IncrementYIfWillExceedMaxWidth(width);
-
-            var rect = new Rect(row.LeftX(width), row.curY, width, width);
-            var result = Widgets.ButtonImage(rect, tex, Color.white, GenUI.MouseoverColor, true);
-
-            row.IncrementPosition(width);
-
-            if (!tooltip.NullOrEmpty())
-                TooltipHandler.TipRegion(rect, tooltip);
-
-            return result;
         }
     }
 
