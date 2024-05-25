@@ -5,22 +5,45 @@
     <LangVersion>9.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <OutputPath>..\Assemblies\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <DebugType>None</DebugType>
     <ReleaseVersion>0.2</ReleaseVersion>
+
+    <!--
+      This value can be overridden by creating an environment variable
+      named RimWorldVersion before calling `dotnet build`.
+    -->
+    <RimWorldVersion Condition="'$(RimWorldVersion)'==''">1.5</RimWorldVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugType>portable</DebugType>
   </PropertyGroup>
 
+  <Choose>
+    <When Condition="'$(RimWorldVersion)' == '1.5'">
+      <PropertyGroup>
+        <OutputPath>..\Assemblies\</OutputPath>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.*" />
+      </ItemGroup>
+    </When>
+    <When Condition="'$(RimWorldVersion)' == '1.4'">
+      <PropertyGroup>
+        <OutputPath>..\1.4\Assemblies\</OutputPath>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.*" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
   <ItemGroup>
     <PackageReference Include="Krafs.Publicizer" Version="2.0.1" />
     <PackageReference Include="dnlib" Version="3.3.2" />
     <PackageReference Include="Lib.Harmony" Version="2.3.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.4042-beta" />
   </ItemGroup>
 
   <ItemGroup>
