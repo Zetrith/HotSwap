@@ -1,3 +1,5 @@
+The project is now archived. Check out https://github.com/Zetrith/EditCompileReload for a continuation.
+
 # HotSwap
 Code hotswapping utility for the RimWorld game.  
 Install by cloning into the Mods folder. How to use: [wiki](https://github.com/Zetrith/HotSwap/wiki)
